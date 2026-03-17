@@ -7,7 +7,10 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? true : (process.env.CLIENT_ORIGIN || 'http://localhost:5173'),
+  credentials: true,
+}));
 app.use(express.json());
 
 // Routes
