@@ -49,15 +49,41 @@ router.get('/', (req, res) => {
     LIMIT 20
   `).all(userId);
 
+  const overdueOnce = db.prepare(`
+    SELECT c.*, GROUP_CONCAT(cat.name) as category_names
+    FROM contacts c
+    LEFT JOIN contact_categories cc ON cc.contact_id = c.id
+    LEFT JOIN categories cat ON cat.id = cc.category_id
+    WHERE c.user_id = ? AND c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
+    GROUP BY c.id
+    ORDER BY c.follow_up_once ASC
+    LIMIT 20
+  `).all(userId);
+
+  const upcomingOnce = db.prepare(`
+    SELECT c.*, GROUP_CONCAT(cat.name) as category_names
+    FROM contacts c
+    LEFT JOIN contact_categories cc ON cc.contact_id = c.id
+    LEFT JOIN categories cat ON cat.id = cc.category_id
+    WHERE c.user_id = ? AND c.follow_up_once > datetime('now')
+      AND c.follow_up_once <= datetime('now', '+7 days')
+    GROUP BY c.id
+    ORDER BY c.follow_up_once ASC
+    LIMIT 20
+  `).all(userId);
+
   const stats = db.prepare(`
     SELECT
       (SELECT COUNT(*) FROM contacts WHERE user_id = ?) as total_contacts,
       (SELECT COUNT(*) FROM tasks WHERE user_id = ? AND completed = 0) as open_tasks,
-      (SELECT COUNT(*) FROM contacts WHERE user_id = ? AND next_follow_up <= datetime('now') AND next_follow_up IS NOT NULL) as overdue_follow_ups,
+      (SELECT COUNT(*) FROM contacts WHERE user_id = ? AND (
+        (next_follow_up IS NOT NULL AND next_follow_up <= datetime('now')) OR
+        (follow_up_once IS NOT NULL AND follow_up_once <= datetime('now'))
+      )) as overdue_follow_ups,
       (SELECT COUNT(*) FROM tasks WHERE user_id = ? AND completed = 0 AND due_date <= datetime('now')) as overdue_tasks
   `).get(userId, userId, userId, userId);
 
-  res.json({ overdueFollowUps, upcomingFollowUps, overdueTasks, upcomingTasks, stats });
+  res.json({ overdueFollowUps, upcomingFollowUps, overdueOnce, upcomingOnce, overdueTasks, upcomingTasks, stats });
 });
 
 module.exports = router;

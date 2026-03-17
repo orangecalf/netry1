@@ -30,7 +30,7 @@ export default function Dashboard({ onNavigate }) {
 
   if (!data) return null;
 
-  const { stats, overdueFollowUps, upcomingFollowUps, overdueTasks, upcomingTasks } = data;
+  const { stats, overdueFollowUps, upcomingFollowUps, overdueOnce, upcomingOnce, overdueTasks, upcomingTasks } = data;
 
   return (
     <div>
@@ -92,6 +92,41 @@ export default function Dashboard({ onNavigate }) {
         </>
       )}
 
+      {overdueOnce?.length > 0 && (
+        <>
+          <div className="section-label" style={{ color: 'var(--danger)' }}>Overdue One-time Follow-ups</div>
+          <div className="card" style={{ margin: '0 16px' }}>
+            {overdueOnce.map(c => (
+              <div key={c.id} className="contact-item" onClick={() => onNavigate('contacts', { contactId: c.id })}>
+                <div className="avatar">{initials(c).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="contact-name">{c.first_name} {c.last_name || ''}</div>
+                  <div className="contact-sub" style={{ color: 'var(--danger)' }}>{formatDate(c.follow_up_once)}</div>
+                </div>
+                <div className="overdue-dot" />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {upcomingOnce?.length > 0 && (
+        <>
+          <div className="section-label">Upcoming One-time Follow-ups (7 days)</div>
+          <div className="card" style={{ margin: '0 16px' }}>
+            {upcomingOnce.map(c => (
+              <div key={c.id} className="contact-item" onClick={() => onNavigate('contacts', { contactId: c.id })}>
+                <div className="avatar">{initials(c).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="contact-name">{c.first_name} {c.last_name || ''}</div>
+                  <div className="contact-sub">{formatDate(c.follow_up_once)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {overdueTasks.length > 0 && (
         <>
           <div className="section-label" style={{ color: 'var(--danger)' }}>Overdue Tasks</div>
@@ -130,7 +165,7 @@ export default function Dashboard({ onNavigate }) {
         </>
       )}
 
-      {!overdueFollowUps.length && !upcomingFollowUps.length && !overdueTasks.length && !upcomingTasks.length && (
+      {!overdueFollowUps.length && !upcomingFollowUps.length && !overdueOnce?.length && !upcomingOnce?.length && !overdueTasks.length && !upcomingTasks.length && (
         <div className="empty-state">
           <div className="empty-state-icon">✅</div>
           <div className="empty-state-title">All caught up!</div>

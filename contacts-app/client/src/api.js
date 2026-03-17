@@ -49,6 +49,7 @@ export const api = {
   updateContact: (id, data) => request('PUT', `/contacts/${id}`, data),
   deleteContact: (id) => request('DELETE', `/contacts/${id}`),
   logContact: (id, notes) => request('POST', `/contacts/${id}/log-contact`, { notes }),
+  setFollowUpOnce: (id, date) => request('PUT', `/contacts/${id}/follow-up-once`, { date }),
   getContactLogs: (id) => request('GET', `/contacts/${id}/logs`),
   importContacts: (file) => {
     const fd = new FormData();

@@ -90,4 +90,10 @@ db.exec(`
   );
 `);
 
+// Migrations
+const cols = db.prepare("PRAGMA table_info(contacts)").all().map(c => c.name);
+if (!cols.includes('follow_up_once')) {
+  db.exec('ALTER TABLE contacts ADD COLUMN follow_up_once DATETIME');
+}
+
 module.exports = db;

@@ -42,14 +42,19 @@ function formatDate(isoStr) {
 }
 
 async function processFollowUpReminders() {
-  // Get all contacts due for follow-up that haven't been reminded today
+  // Get all contacts due for follow-up (recurring or one-time)
   const overdueContacts = db.prepare(`
-    SELECT c.*, u.notification_email, u.username
+    SELECT c.*, u.notification_email, u.username,
+      CASE WHEN c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
+           THEN c.follow_up_once ELSE c.next_follow_up END as due_date,
+      CASE WHEN c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
+           THEN 1 ELSE 0 END as is_once
     FROM contacts c
     JOIN users u ON u.id = c.user_id
-    WHERE c.next_follow_up IS NOT NULL
-      AND c.next_follow_up <= datetime('now')
-      AND u.notification_email IS NOT NULL
+    WHERE u.notification_email IS NOT NULL AND (
+      (c.next_follow_up IS NOT NULL AND c.next_follow_up <= datetime('now')) OR
+      (c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now'))
+    )
   `).all();
 
   // Group by user
@@ -69,7 +74,7 @@ async function processFollowUpReminders() {
         <td style="padding:8px;border-bottom:1px solid #eee">${c.first_name} ${c.last_name || ''}</td>
         <td style="padding:8px;border-bottom:1px solid #eee">${c.phone || '—'}</td>
         <td style="padding:8px;border-bottom:1px solid #eee">${c.work_email || c.personal_email || '—'}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee">${formatDate(c.next_follow_up)}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee">${formatDate(c.due_date)}${c.is_once ? ' (one-time)' : ''}</td>
       </tr>
     `).join('');
 

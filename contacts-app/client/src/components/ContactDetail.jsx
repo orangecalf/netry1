@@ -21,6 +21,8 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
   const [showLogForm, setShowLogForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [tasks, setTasks] = useState([]);
+  const [showFollowUpOnceForm, setShowFollowUpOnceForm] = useState(false);
+  const [followUpOnceDate, setFollowUpOnceDate] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -48,6 +50,29 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
       showToast(err.message);
     } finally {
       setLogging(false);
+    }
+  }
+
+  async function handleSetFollowUpOnce() {
+    if (!followUpOnceDate) return;
+    try {
+      const updated = await api.setFollowUpOnce(contact.id, new Date(followUpOnceDate).toISOString());
+      setContact(updated);
+      setShowFollowUpOnceForm(false);
+      setFollowUpOnceDate('');
+      showToast('One-time follow-up set!');
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
+  async function handleClearFollowUpOnce() {
+    try {
+      const updated = await api.setFollowUpOnce(contact.id, null);
+      setContact(updated);
+      showToast('Follow-up dismissed.');
+    } catch (err) {
+      showToast(err.message);
     }
   }
 
@@ -128,6 +153,17 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
                 </span>
               </div>
             )}
+            {contact.follow_up_once && (
+              <div className="detail-row">
+                <span className="detail-label">One-time</span>
+                <span className="detail-value" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: isOverdue(contact.follow_up_once) ? 'var(--danger)' : 'inherit', fontWeight: isOverdue(contact.follow_up_once) ? 600 : 500 }}>
+                    {isOverdue(contact.follow_up_once) ? '⚠️ ' : ''}{formatDate(contact.follow_up_once)}
+                  </span>
+                  <button className="btn-ghost" onClick={handleClearFollowUpOnce} style={{ padding: '1px 6px', fontSize: 11, color: 'var(--muted)' }}>Dismiss</button>
+                </span>
+              </div>
+            )}
             {contact.last_contacted && (
               <div className="detail-row">
                 <span className="detail-label">Last contact</span>
@@ -156,6 +192,23 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
                 <button className="btn-primary" onClick={handleLogContact} disabled={logging} style={{ flex: 1 }}>
                   {logging ? 'Saving...' : 'Log Contact'}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* One-time follow-up setter */}
+          {!contact.follow_up_once && !showFollowUpOnceForm && (
+            <button className="btn-secondary" onClick={() => setShowFollowUpOnceForm(true)} style={{ width: '100%', marginBottom: 12 }}>
+              + Set one-time follow-up
+            </button>
+          )}
+          {showFollowUpOnceForm && (
+            <div style={{ marginBottom: 12, background: 'var(--bg)', borderRadius: 8, padding: 12 }}>
+              <label>Follow-up date</label>
+              <input type="date" value={followUpOnceDate} onChange={e => setFollowUpOnceDate(e.target.value)} style={{ marginTop: 4 }} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn-secondary" onClick={() => { setShowFollowUpOnceForm(false); setFollowUpOnceDate(''); }} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn-primary" onClick={handleSetFollowUpOnce} disabled={!followUpOnceDate} style={{ flex: 1 }}>Set</button>
               </div>
             </div>
           )}

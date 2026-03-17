@@ -154,11 +154,23 @@ router.post('/:id/log-contact', (req, res) => {
   db.prepare('INSERT INTO follow_up_logs (contact_id, user_id, contacted_at, notes) VALUES (?, ?, ?, ?)')
     .run(contact.id, req.user.id, now, notes || null);
 
-  db.prepare('UPDATE contacts SET last_contacted = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+  db.prepare('UPDATE contacts SET last_contacted = ?, follow_up_once = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run(now, contact.id);
 
   // Recalculate next follow-up
   setNextFollowUp(contact.id);
+
+  res.json(getContactWithCategories(contact.id));
+});
+
+// Set or clear a one-time follow-up date
+router.put('/:id/follow-up-once', (req, res) => {
+  const contact = db.prepare('SELECT * FROM contacts WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  if (!contact) return res.status(404).json({ error: 'Contact not found' });
+
+  const { date } = req.body;
+  db.prepare('UPDATE contacts SET follow_up_once = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(date || null, contact.id);
 
   res.json(getContactWithCategories(contact.id));
 });
