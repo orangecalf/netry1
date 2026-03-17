@@ -96,4 +96,9 @@ if (!cols.includes('follow_up_once')) {
   db.exec('ALTER TABLE contacts ADD COLUMN follow_up_once DATETIME');
 }
 
+const taskCols = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
+if (!taskCols.includes('completion_note')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN completion_note TEXT');
+}
+
 module.exports = db;

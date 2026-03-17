@@ -20,6 +20,8 @@ export default function Tasks({ showToast }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editTask, setEditTask] = useState(null);
+  const [completingTask, setCompletingTask] = useState(null); // task being completed
+  const [completionNote, setCompletionNote] = useState('');
 
   const load = useCallback(() => {
     const params = {};
@@ -30,14 +32,37 @@ export default function Tasks({ showToast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  async function toggleTask(task) {
-    const updated = await api.updateTask(task.id, { completed: !task.completed });
+  function handleCheckClick(task) {
+    if (!task.completed) {
+      // Completing — show note prompt
+      setCompletingTask(task);
+      setCompletionNote('');
+    } else {
+      // Reopening — no prompt needed
+      reopenTask(task);
+    }
+  }
+
+  async function confirmComplete() {
+    const updated = await api.updateTask(completingTask.id, { completed: true, completionNote: completionNote || null });
+    setCompletingTask(null);
+    setCompletionNote('');
+    if (filter !== 'all') {
+      setTasks(ts => ts.filter(t => t.id !== updated.id));
+    } else {
+      setTasks(ts => ts.map(t => t.id === updated.id ? updated : t));
+    }
+    showToast('Task completed!');
+  }
+
+  async function reopenTask(task) {
+    const updated = await api.updateTask(task.id, { completed: false });
     if (filter !== 'all') {
       setTasks(ts => ts.filter(t => t.id !== task.id));
     } else {
       setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
     }
-    showToast(updated.completed ? 'Task completed!' : 'Task reopened');
+    showToast('Task reopened');
   }
 
   async function deleteTask(task) {
@@ -103,37 +128,59 @@ export default function Tasks({ showToast }) {
             <div className="card" style={{ margin: '0 16px' }}>
               {groupTasks.map(t => {
                 const dateInfo = formatDate(t.due_date);
+                const isCompleting = completingTask?.id === t.id;
                 return (
-                  <div key={t.id} className="task-item">
-                    <div
-                      className={`task-check ${t.completed ? 'done' : ''}`}
-                      onClick={() => toggleTask(t)}
-                    >
-                      {t.completed && (
-                        <svg fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3} width={10} height={10}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
+                  <div key={t.id}>
+                    <div className="task-item">
+                      <div
+                        className={`task-check ${t.completed ? 'done' : ''}`}
+                        onClick={() => handleCheckClick(t)}
+                      >
+                        {t.completed && (
+                          <svg fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3} width={10} height={10}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className={`task-title ${t.completed ? 'done' : ''}`}>{t.title}</div>
+                        {t.description && (
+                          <div className="task-meta" style={{ marginTop: 1 }}>{t.description}</div>
+                        )}
+                        {t.completion_note && (
+                          <div className="task-meta" style={{ marginTop: 1, fontStyle: 'italic' }}>Note: {t.completion_note}</div>
+                        )}
+                        {dateInfo && (
+                          <div className={`task-meta ${dateInfo.overdue && !t.completed ? 'task-overdue' : ''}`}>
+                            {dateInfo.label}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        <button className="btn-ghost" onClick={() => { setEditTask(t); setShowForm(true); }} style={{ padding: 6 }}>
+                          <EditIcon />
+                        </button>
+                        <button className="btn-ghost" onClick={() => deleteTask(t)} style={{ padding: 6, color: 'var(--danger)' }}>
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className={`task-title ${t.completed ? 'done' : ''}`}>{t.title}</div>
-                      {t.description && (
-                        <div className="task-meta" style={{ marginTop: 1 }}>{t.description}</div>
-                      )}
-                      {dateInfo && (
-                        <div className={`task-meta ${dateInfo.overdue && !t.completed ? 'task-overdue' : ''}`}>
-                          {dateInfo.label}
+                    {isCompleting && (
+                      <div style={{ padding: '8px 16px 12px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                        <textarea
+                          value={completionNote}
+                          onChange={e => setCompletionNote(e.target.value)}
+                          placeholder="Add a completion note (optional)..."
+                          rows={2}
+                          autoFocus
+                          style={{ fontSize: 13, marginBottom: 8 }}
+                        />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn-secondary" onClick={() => setCompletingTask(null)} style={{ flex: 1, padding: '7px 0' }}>Cancel</button>
+                          <button className="btn-primary" onClick={confirmComplete} style={{ flex: 1, padding: '7px 0' }}>Mark Done</button>
                         </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: 2 }}>
-                      <button className="btn-ghost" onClick={() => { setEditTask(t); setShowForm(true); }} style={{ padding: 6 }}>
-                        <EditIcon />
-                      </button>
-                      <button className="btn-ghost" onClick={() => deleteTask(t)} style={{ padding: 6, color: 'var(--danger)' }}>
-                        <TrashIcon />
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

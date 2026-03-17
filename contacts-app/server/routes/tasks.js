@@ -66,7 +66,7 @@ router.put('/:id', (req, res) => {
   const task = db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { title, description, contactId, dueDate, completed } = req.body;
+  const { title, description, contactId, dueDate, completed, completionNote } = req.body;
 
   if (contactId !== undefined && contactId !== null) {
     const contact = db.prepare('SELECT id FROM contacts WHERE id = ? AND user_id = ?').get(contactId, req.user.id);
@@ -76,7 +76,7 @@ router.put('/:id', (req, res) => {
   db.prepare(`
     UPDATE tasks SET
       title = ?, description = ?, contact_id = ?, due_date = ?,
-      completed = ?, updated_at = CURRENT_TIMESTAMP
+      completed = ?, completion_note = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
     title !== undefined ? title.trim() : task.title,
@@ -84,6 +84,7 @@ router.put('/:id', (req, res) => {
     contactId !== undefined ? contactId : task.contact_id,
     dueDate !== undefined ? dueDate : task.due_date,
     completed !== undefined ? (completed ? 1 : 0) : task.completed,
+    completionNote !== undefined ? completionNote : task.completion_note,
     task.id
   );
 

@@ -14,6 +14,11 @@ export default function TaskForm({ task, contactId, contactName, onSave, onClose
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
     if (!contactId) {
       api.getContacts().then(setContacts).catch(console.error);
     }

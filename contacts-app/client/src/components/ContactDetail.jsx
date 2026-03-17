@@ -23,6 +23,13 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
   const [tasks, setTasks] = useState([]);
   const [showFollowUpOnceForm, setShowFollowUpOnceForm] = useState(false);
   const [followUpOnceDate, setFollowUpOnceDate] = useState('');
+  const [completingTask, setCompletingTask] = useState(null);
+  const [completionNote, setCompletionNote] = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -76,9 +83,23 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
     }
   }
 
-  async function toggleTask(task) {
-    const updated = await api.updateTask(task.id, { completed: !task.completed });
-    setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
+  function handleTaskCheck(task) {
+    if (!task.completed) {
+      setCompletingTask(task);
+      setCompletionNote('');
+    } else {
+      api.updateTask(task.id, { completed: false }).then(updated =>
+        setTasks(ts => ts.map(t => t.id === task.id ? updated : t))
+      );
+    }
+  }
+
+  async function confirmComplete() {
+    const updated = await api.updateTask(completingTask.id, { completed: true, completionNote: completionNote || null });
+    setTasks(ts => ts.map(t => t.id === completingTask.id ? updated : t));
+    setCompletingTask(null);
+    setCompletionNote('');
+    showToast('Task completed!');
   }
 
   if (loading) return (
@@ -224,14 +245,33 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
             ) : (
               <div className="card">
                 {tasks.map(t => (
-                  <div key={t.id} className="task-item">
-                    <div className={`task-check ${t.completed ? 'done' : ''}`} onClick={() => toggleTask(t)}>
-                      {t.completed && <svg fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3} width={10} height={10}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  <div key={t.id}>
+                    <div className="task-item">
+                      <div className={`task-check ${t.completed ? 'done' : ''}`} onClick={() => handleTaskCheck(t)}>
+                        {t.completed && <svg fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3} width={10} height={10}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div className={`task-title ${t.completed ? 'done' : ''}`}>{t.title}</div>
+                        {t.completion_note && <div className="task-meta" style={{ fontStyle: 'italic' }}>Note: {t.completion_note}</div>}
+                        {t.due_date && <div className="task-meta">{formatDate(t.due_date)}</div>}
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div className={`task-title ${t.completed ? 'done' : ''}`}>{t.title}</div>
-                      {t.due_date && <div className="task-meta">{formatDate(t.due_date)}</div>}
-                    </div>
+                    {completingTask?.id === t.id && (
+                      <div style={{ padding: '8px 16px 12px', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                        <textarea
+                          value={completionNote}
+                          onChange={e => setCompletionNote(e.target.value)}
+                          placeholder="Add a completion note (optional)..."
+                          rows={2}
+                          autoFocus
+                          style={{ fontSize: 13, marginBottom: 8 }}
+                        />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn-secondary" onClick={() => setCompletingTask(null)} style={{ flex: 1, padding: '7px 0' }}>Cancel</button>
+                          <button className="btn-primary" onClick={confirmComplete} style={{ flex: 1, padding: '7px 0' }}>Mark Done</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -242,7 +282,7 @@ export default function ContactDetail({ contactId, onClose, onEdit, onDelete, sh
           {logs.length > 0 && (
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>HISTORY</div>
-              {logs.slice(0, 5).map(log => (
+              {logs.map(log => (
                 <div key={log.id} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                   <span style={{ color: 'var(--muted)' }}>{formatDate(log.contacted_at)}</span>
                   {log.notes && <span> — {log.notes}</span>}
