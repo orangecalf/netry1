@@ -91,11 +91,23 @@ async function initDb() {
       FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS google_sync (
+      user_id INTEGER PRIMARY KEY,
+      access_token TEXT,
+      refresh_token TEXT,
+      token_expiry INTEGER,
+      sync_token TEXT,
+      last_synced_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
   // Migrations for existing databases
   try { await db.execute('ALTER TABLE contacts ADD COLUMN follow_up_once DATETIME'); } catch {}
   try { await db.execute('ALTER TABLE tasks ADD COLUMN completion_note TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE contacts ADD COLUMN google_resource_name TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE contacts ADD COLUMN google_etag TEXT'); } catch {}
 }
 
 module.exports = { db, initDb };

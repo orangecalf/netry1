@@ -20,6 +20,7 @@ app.use('/api/contacts', require('./routes/contacts'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/google', require('./routes/google'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -38,6 +39,9 @@ async function start() {
 
   const { startReminderScheduler } = require('./services/reminders');
   startReminderScheduler();
+
+  const { startGoogleSyncScheduler } = require('./services/googleSync');
+  startGoogleSyncScheduler();
 
   app.listen(PORT, () => {
     console.log(`Contact Manager API running on http://localhost:${PORT}`);

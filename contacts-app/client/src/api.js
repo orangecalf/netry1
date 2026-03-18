@@ -64,6 +64,13 @@ export const api = {
   updateCategory: (id, data) => request('PUT', `/categories/${id}`, data),
   deleteCategory: (id) => request('DELETE', `/categories/${id}`),
 
+  // Google Contacts sync
+  googleConfigured: () => request('GET', '/google/configured'),
+  googleStatus: () => request('GET', '/google/status'),
+  googleSync: () => request('POST', '/google/sync'),
+  googleDisconnect: () => request('DELETE', '/google/disconnect'),
+  googleAuthUrl: () => `${BASE}/google/auth?state=${encodeURIComponent(localStorage.getItem('token') || '')}`,
+
   // Tasks
   getTasks: (params = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''));

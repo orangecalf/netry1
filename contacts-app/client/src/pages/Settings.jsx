@@ -8,9 +8,18 @@ export default function Settings({ user, onLogout, showToast }) {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef();
 
+  const [googleConfigured, setGoogleConfigured] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState(null); // { connected, lastSyncedAt }
+  const [googleSyncing, setGoogleSyncing] = useState(false);
+
   useEffect(() => {
     if (user) setNotifEmail(user.notification_email || user.email || '');
   }, [user]);
+
+  useEffect(() => {
+    api.googleConfigured().then(r => setGoogleConfigured(r.configured)).catch(() => {});
+    api.googleStatus().then(setGoogleStatus).catch(() => {});
+  }, []);
 
   async function saveNotifEmail(e) {
     e.preventDefault();
@@ -42,10 +51,8 @@ export default function Settings({ user, onLogout, showToast }) {
 
   function handleExport() {
     const token = localStorage.getItem('token');
-    // Trigger file download via a link
     const url = api.exportContacts();
     const a = document.createElement('a');
-    // We need to fetch with auth header to download
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.blob())
       .then(blob => {
@@ -61,6 +68,39 @@ export default function Settings({ user, onLogout, showToast }) {
       .catch(() => showToast('Export failed'));
   }
 
+  function handleGoogleConnect() {
+    window.location.href = api.googleAuthUrl();
+  }
+
+  async function handleGoogleSync() {
+    setGoogleSyncing(true);
+    try {
+      const result = await api.googleSync();
+      setGoogleStatus(s => ({ ...s, lastSyncedAt: result.lastSyncedAt }));
+      showToast('Google Contacts synced!');
+    } catch (err) {
+      showToast('Sync failed: ' + err.message);
+    } finally {
+      setGoogleSyncing(false);
+    }
+  }
+
+  async function handleGoogleDisconnect() {
+    try {
+      await api.googleDisconnect();
+      setGoogleStatus({ connected: false, lastSyncedAt: null });
+      showToast('Google Contacts disconnected');
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
+  function formatSyncTime(iso) {
+    if (!iso) return 'Never';
+    const d = new Date(iso);
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -68,7 +108,7 @@ export default function Settings({ user, onLogout, showToast }) {
       </div>
 
       <div style={{ padding: '0 16px' }}>
-        {/* Profile */}
+        {/* Account */}
         <div className="card" style={{ padding: 16, marginBottom: 12 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Account</h3>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -80,6 +120,50 @@ export default function Settings({ user, onLogout, showToast }) {
               <div style={{ fontSize: 13, color: 'var(--muted)' }}>{user?.email}</div>
             </div>
           </div>
+        </div>
+
+        {/* Google Contacts Sync */}
+        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Google Contacts Sync</h3>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+            Bidirectional sync with Google Contacts. Runs automatically every hour.
+          </p>
+
+          {!googleConfigured ? (
+            <div style={{ padding: 12, background: 'var(--bg)', borderRadius: 8, fontSize: 13, color: 'var(--muted)' }}>
+              Set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> in your <code>.env</code> to enable Google sync.
+            </div>
+          ) : googleStatus?.connected ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  Connected · Last synced: {formatSyncTime(googleStatus.lastSyncedAt)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn-primary"
+                  onClick={handleGoogleSync}
+                  disabled={googleSyncing}
+                  style={{ flex: 1 }}
+                >
+                  {googleSyncing ? 'Syncing...' : 'Sync Now'}
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={handleGoogleDisconnect}
+                  style={{ flex: 1 }}
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="btn-primary" onClick={handleGoogleConnect} style={{ width: '100%' }}>
+              Connect Google Contacts
+            </button>
+          )}
         </div>
 
         {/* Notification email */}

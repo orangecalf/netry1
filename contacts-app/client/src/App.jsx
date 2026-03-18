@@ -26,6 +26,21 @@ export default function App() {
   const { toast, showToast } = useToast();
 
   useEffect(() => {
+    // Handle OAuth redirect back from Google
+    const params = new URLSearchParams(window.location.search);
+    const googleResult = params.get('google');
+    if (googleResult) {
+      window.history.replaceState({}, '', window.location.pathname);
+      if (googleResult === 'connected') {
+        setTab('settings');
+        // Show toast after auth loads
+        setTimeout(() => showToast('Google Contacts connected! Syncing now...'), 500);
+      } else if (googleResult === 'error') {
+        setTab('settings');
+        setTimeout(() => showToast('Google connection failed. Please try again.'), 500);
+      }
+    }
+
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
     api.me().then(u => { setUser(u); setAuthed(true); }).catch(() => {
