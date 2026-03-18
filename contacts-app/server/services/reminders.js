@@ -1,18 +1,13 @@
 const cron = require('node-cron');
 const nodemailer = require('nodemailer');
-const db = require('../db');
+const { db } = require('../db');
 
-// Configure transporter via environment variables
-// For Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USER=you@gmail.com, SMTP_PASS=app-password
 function createTransporter() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
 }
 
@@ -21,15 +16,9 @@ async function sendReminderEmail(to, subject, html) {
     console.log(`[Reminders] Email not configured. Would send to ${to}: ${subject}`);
     return;
   }
-
   try {
     const transporter = createTransporter();
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to,
-      subject,
-      html,
-    });
+    await transporter.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, html });
     console.log(`[Reminders] Email sent to ${to}: ${subject}`);
   } catch (err) {
     console.error(`[Reminders] Failed to send email:`, err.message);
@@ -42,27 +31,24 @@ function formatDate(isoStr) {
 }
 
 async function processFollowUpReminders() {
-  // Get all contacts due for follow-up (recurring or one-time)
-  const overdueContacts = db.prepare(`
-    SELECT c.*, u.notification_email, u.username,
-      CASE WHEN c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
-           THEN c.follow_up_once ELSE c.next_follow_up END as due_date,
-      CASE WHEN c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
-           THEN 1 ELSE 0 END as is_once
-    FROM contacts c
-    JOIN users u ON u.id = c.user_id
-    WHERE u.notification_email IS NOT NULL AND (
-      (c.next_follow_up IS NOT NULL AND c.next_follow_up <= datetime('now')) OR
-      (c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now'))
-    )
-  `).all();
+  const overdueContacts = (await db.execute({
+    sql: `SELECT c.*, u.notification_email, u.username,
+            CASE WHEN c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
+                 THEN c.follow_up_once ELSE c.next_follow_up END as due_date,
+            CASE WHEN c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now')
+                 THEN 1 ELSE 0 END as is_once
+          FROM contacts c
+          JOIN users u ON u.id = c.user_id
+          WHERE u.notification_email IS NOT NULL AND (
+            (c.next_follow_up IS NOT NULL AND c.next_follow_up <= datetime('now')) OR
+            (c.follow_up_once IS NOT NULL AND c.follow_up_once <= datetime('now'))
+          )`,
+    args: [],
+  })).rows;
 
-  // Group by user
   const byUser = {};
   for (const row of overdueContacts) {
-    if (!byUser[row.user_id]) {
-      byUser[row.user_id] = { email: row.notification_email, username: row.username, contacts: [] };
-    }
+    if (!byUser[row.user_id]) byUser[row.user_id] = { email: row.notification_email, username: row.username, contacts: [] };
     byUser[row.user_id].contacts.push(row);
   }
 
@@ -82,14 +68,12 @@ async function processFollowUpReminders() {
       <h2 style="color:#6366f1">Contact Follow-Up Reminders</h2>
       <p>Hi ${data.username}, you have ${data.contacts.length} contact(s) due for follow-up:</p>
       <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
-        <thead>
-          <tr style="background:#6366f1;color:#fff">
-            <th style="padding:8px;text-align:left">Name</th>
-            <th style="padding:8px;text-align:left">Phone</th>
-            <th style="padding:8px;text-align:left">Email</th>
-            <th style="padding:8px;text-align:left">Due Date</th>
-          </tr>
-        </thead>
+        <thead><tr style="background:#6366f1;color:#fff">
+          <th style="padding:8px;text-align:left">Name</th>
+          <th style="padding:8px;text-align:left">Phone</th>
+          <th style="padding:8px;text-align:left">Email</th>
+          <th style="padding:8px;text-align:left">Due Date</th>
+        </tr></thead>
         <tbody>${contactRows}</tbody>
       </table>
       <p style="color:#888;font-size:12px;margin-top:20px">Log in to your contact manager to update these contacts.</p>
@@ -100,26 +84,22 @@ async function processFollowUpReminders() {
 }
 
 async function processTaskReminders() {
-  // Find tasks due within 24 hours that haven't had a reminder sent
-  const dueTasks = db.prepare(`
-    SELECT t.*, u.notification_email, u.username, c.first_name, c.last_name
-    FROM tasks t
-    JOIN users u ON u.id = t.user_id
-    LEFT JOIN contacts c ON c.id = t.contact_id
-    WHERE t.completed = 0
-      AND t.reminder_sent = 0
-      AND t.due_date IS NOT NULL
-      AND t.due_date <= datetime('now', '+1 day')
-      AND t.due_date > datetime('now', '-1 hour')
-      AND u.notification_email IS NOT NULL
-  `).all();
+  const dueTasks = (await db.execute({
+    sql: `SELECT t.*, u.notification_email, u.username, c.first_name, c.last_name
+          FROM tasks t
+          JOIN users u ON u.id = t.user_id
+          LEFT JOIN contacts c ON c.id = t.contact_id
+          WHERE t.completed = 0 AND t.reminder_sent = 0
+            AND t.due_date IS NOT NULL
+            AND t.due_date <= datetime('now', '+1 day')
+            AND t.due_date > datetime('now', '-1 hour')
+            AND u.notification_email IS NOT NULL`,
+    args: [],
+  })).rows;
 
-  // Group by user
   const byUser = {};
   for (const row of dueTasks) {
-    if (!byUser[row.user_id]) {
-      byUser[row.user_id] = { email: row.notification_email, username: row.username, tasks: [] };
-    }
+    if (!byUser[row.user_id]) byUser[row.user_id] = { email: row.notification_email, username: row.username, tasks: [] };
     byUser[row.user_id].tasks.push(row);
   }
 
@@ -138,36 +118,30 @@ async function processTaskReminders() {
       <h2 style="color:#6366f1">Task Reminders</h2>
       <p>Hi ${data.username}, you have ${data.tasks.length} task(s) due soon:</p>
       <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
-        <thead>
-          <tr style="background:#6366f1;color:#fff">
-            <th style="padding:8px;text-align:left">Task</th>
-            <th style="padding:8px;text-align:left">Contact</th>
-            <th style="padding:8px;text-align:left">Due Date</th>
-          </tr>
-        </thead>
+        <thead><tr style="background:#6366f1;color:#fff">
+          <th style="padding:8px;text-align:left">Task</th>
+          <th style="padding:8px;text-align:left">Contact</th>
+          <th style="padding:8px;text-align:left">Due Date</th>
+        </tr></thead>
         <tbody>${taskRows}</tbody>
       </table>
     `;
 
     await sendReminderEmail(data.email, `Task reminder: ${data.tasks.length} task(s) due soon`, html);
 
-    // Mark reminders as sent
-    const markSent = db.prepare('UPDATE tasks SET reminder_sent = 1 WHERE id = ?');
     for (const t of data.tasks) {
-      markSent.run(t.id);
+      await db.execute({ sql: 'UPDATE tasks SET reminder_sent = 1 WHERE id = ?', args: [t.id] });
     }
   }
 }
 
 function startReminderScheduler() {
-  // Run every morning at 8am
   cron.schedule('0 8 * * *', async () => {
     console.log('[Reminders] Running daily reminder check...');
     await processFollowUpReminders();
     await processTaskReminders();
   });
 
-  // Also check task reminders every hour for near-due tasks
   cron.schedule('0 * * * *', async () => {
     await processTaskReminders();
   });

@@ -3,6 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { initDb } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,12 +33,20 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Start reminder scheduler
-const { startReminderScheduler } = require('./services/reminders');
-startReminderScheduler();
+async function start() {
+  await initDb();
 
-app.listen(PORT, () => {
-  console.log(`Contact Manager API running on http://localhost:${PORT}`);
+  const { startReminderScheduler } = require('./services/reminders');
+  startReminderScheduler();
+
+  app.listen(PORT, () => {
+    console.log(`Contact Manager API running on http://localhost:${PORT}`);
+  });
+}
+
+start().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
 
 module.exports = app;
