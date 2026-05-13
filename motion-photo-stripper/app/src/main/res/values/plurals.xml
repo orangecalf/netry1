@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="status_scanning_found">
+        <item quantity="one">Scanning… found %d motion photo so far</item>
+        <item quantity="other">Scanning… found %d motion photos so far</item>
+    </plurals>
+
+    <plurals name="status_scan_complete">
+        <item quantity="one">Found %d motion photo. Ready to strip.</item>
+        <item quantity="other">Found %d motion photos. Ready to strip.</item>
+    </plurals>
+</resources>

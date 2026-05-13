@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Camera body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 C40,28 28,38 28,52 C28,66 40,76 54,76 C68,76 80,66 80,52 C80,38 68,28 54,28 Z M54,70 C43,70 34,62 34,52 C34,42 43,34 54,34 C65,34 74,42 74,52 C74,62 65,70 54,70 Z" />
+
+    <!-- Scissors / cut symbol — represents stripping -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,46 L60,58 M60,46 L48,58"
+        android:strokeColor="#FF1428A0"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+</vector>

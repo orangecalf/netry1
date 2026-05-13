@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Motion Photo Stripper</string>
+    <string name="app_title">Motion Photo Stripper</string>
+    <string name="app_subtitle">Remove embedded video from Samsung Motion Photos, keeping only the still image. Scans your gallery and WhatsApp folders.</string>
+
+    <!-- Mode labels -->
+    <string name="mode_label">Output mode</string>
+    <string name="mode_copy">Save as copy — write stripped images to Pictures/StrippedPhotos/</string>
+    <string name="mode_overwrite">Overwrite originals — replace files in place (requires full storage access)</string>
+
+    <!-- Buttons -->
+    <string name="btn_scan">Scan for Motion Photos</string>
+    <string name="btn_process">Strip Motion Data</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_reset">Start Over</string>
+
+    <!-- Status messages -->
+    <string name="status_idle">Tap "Scan" to find Samsung Motion Photos on this device, including images received via WhatsApp. For best WhatsApp coverage, grant "All files access" when processing.</string>
+    <string name="status_scanning">Scanning…</string>
+    <string name="status_none_found">No Samsung Motion Photos found.</string>
+    <string name="status_done">Processing complete.</string>
+    <string name="status_processing">Processing %1$d of %2$d…\n%3$s</string>
+    <string name="status_error">Error: %1$s</string>
+
+    <!-- Plurals placeholders (used via getQuantityString in code) -->
+
+    <!-- Summary section -->
+    <string name="summary_title">Summary</string>
+    <string name="summary_processed">Stripped: %1$d files</string>
+    <string name="summary_errors">Skipped / errors: %1$d files</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_permission_title">Permission required</string>
+    <string name="dialog_permission_message">Storage read permission is needed to scan for Motion Photos. Please grant the permission and try again.</string>
+    <string name="dialog_storage_title">Full storage access needed</string>
+    <string name="dialog_storage_message">To overwrite original files, the app needs "All files access" permission. You will be taken to the system settings screen to grant it.</string>
+    <string name="dialog_storage_message_copy">To write files, the app needs "All files access" permission. You will be taken to the system settings screen to grant it.</string>
+    <string name="dialog_storage_message_denied">Full storage access was not granted. Switch to "Save as copy" mode, or grant the permission in Settings.</string>
+    <string name="dialog_storage_ok">Open Settings</string>
+
+    <!-- WhatsApp access dialog -->
+    <string name="dialog_whatsapp_title">Include WhatsApp photos?</string>
+    <string name="dialog_whatsapp_message">WhatsApp stores received photos in a protected folder. Grant "All files access" to include those photos in the scan. You can skip this and still scan your camera roll and gallery.</string>
+    <string name="dialog_whatsapp_grant">Grant access</string>
+    <string name="dialog_whatsapp_skip">Skip — gallery only</string>
+</resources>
