@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.MotionPhotoStripper" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/samsung_blue</item>
+        <item name="colorPrimaryVariant">@color/samsung_blue_light</item>
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+
+</resources>
